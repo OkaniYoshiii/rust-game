@@ -1,6 +1,7 @@
 use std::time::Duration;
 
-use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}};
+use game::tile::{self, tile_position};
+use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
 
 const TARGET_FPS: u32 = 30;
 
@@ -16,16 +17,28 @@ struct State {
 
 impl ggez::event::EventHandler for State {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        while !ctx.time.check_update_time(TARGET_FPS) { return Ok(()); }
-
         self.delta_time = ctx.time.delta();
+
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
-        while !ctx.time.check_update_time(TARGET_FPS) { return Ok(()); }
-
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
+        
+        let origin = Vector2 { x: 100, y: 100 };
+        let positions = vec![
+            Vector2 { x: 0, y: 0 },
+            Vector2 { x: 1, y: 0 },
+            Vector2 { x: 0, y: 1 },
+            Vector2 { x: 1, y: 1 },
+        ];
+
+        for pos in positions {
+            let screen_pos = tile_position(origin, pos);
+
+            tile::draw_tile(ctx, &mut canvas, screen_pos)?;
+        }
+
         let text = Text::new("Rust game");
         let params = DrawParam{
             color: Color::BLACK,
