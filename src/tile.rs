@@ -3,8 +3,43 @@ use ggez::{mint::Vector2};
 use ggez::graphics::{self, Canvas, Color, Mesh, Rect};
 use rand::Rng;
 
-const TILE_WIDTH: i32 = 100;
-const TILE_HEIGHT: i32 = 50;
+const GRID_SIZE: u8 = 10;
+const TILE_WIDTH: i32 = 60;
+const TILE_HEIGHT: i32 = 30;
+const CELLS: Cells = [
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::House, Tile::House, Tile::House, Tile::House, Tile::House, Tile::House, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
+];
+
+pub enum Tile {
+    House,
+    None,
+}
+
+pub type Cells = [[Tile; GRID_SIZE as usize]; GRID_SIZE as usize];
+// pub struct Cells(pub [[Option<Tile>; GRID_SIZE]; GRID_SIZE]);
+
+pub struct Grid {
+    pub origin: Vector2<i32>,
+    pub cells: Cells,
+}
+
+impl Grid {
+    pub fn new(origin: Vector2<i32>) -> Self {
+        Grid {
+            origin: origin,
+            cells: CELLS,
+        }
+    }
+}
 
 /// For an isometric grid like this one:
 ///          /x:0,y:0/
@@ -18,9 +53,7 @@ const TILE_HEIGHT: i32 = 50;
 /// 
 /// See: https://pikuma.com/blog/isometric-projection-in-games
 /// 
-/// origin: La position sur l'écran de la tile à la position: 0,0
-/// tile_pos: la position x et y sur la grille de la tile à poser
-pub fn tile_position(origin: Vector2<i32>, tile_pos: Vector2<i32>) -> Vector2<i32> {
+pub fn tile_position(origin: &Vector2<i32>, tile_pos: &Vector2<i32>) -> Vector2<i32> {
     let screen_x = origin.x + ((tile_pos.x - tile_pos.y) * TILE_WIDTH / 2);
     let screen_y = origin.y + ((tile_pos.x + tile_pos.y) * TILE_HEIGHT / 2);
 
@@ -30,7 +63,7 @@ pub fn tile_position(origin: Vector2<i32>, tile_pos: Vector2<i32>) -> Vector2<i3
     }
 }
 
-pub fn draw_tile(ctx: &mut Context, canvas: &mut Canvas, screen_pos: Vector2<i32>) -> GameResult {
+pub fn draw_tile(ctx: &mut Context, canvas: &mut Canvas, screen_pos: &Vector2<i32>, tile: &Tile) -> GameResult {
     let mut rng = rand::rng();
     let color = Color::from_rgb(
         rng.random_range(0..255),
@@ -45,14 +78,22 @@ pub fn draw_tile(ctx: &mut Context, canvas: &mut Canvas, screen_pos: Vector2<i32
         TILE_HEIGHT as f32,
     );
 
-    let rect_mesh = Mesh::new_rectangle(
-        ctx,
-        graphics::DrawMode::fill(),
-        rect,
-        color,
-    )?;
+    let mesh = match tile {
+        Tile::House => Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            rect,
+            Color::from_rgb(255, 255, 255),
+        )?,
+        Tile::None => Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            rect,
+            color,
+        )?
+    };
 
-    canvas.draw(&rect_mesh, graphics::DrawParam::default());
+    canvas.draw(&mesh, graphics::DrawParam::default());
 
     Ok(())
 }
@@ -82,7 +123,7 @@ mod tests {
         ]);
 
         for test in tests {
-            let position = tile_position(test.origin, test.tile_pos);
+            let position = tile_position(&test.origin, &test.tile_pos);
 
             assert_eq!(position.x, test.expected.x);
             assert_eq!(position.y, test.expected.y);

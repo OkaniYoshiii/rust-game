@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use game::tile::{self, tile_position};
+use game::tile::{self, Grid, tile_position};
 use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
 
 const UPDATE_RATE: u32 = 30;
@@ -13,6 +13,7 @@ const UPDATE_RATE: u32 = 30;
 /// player position, scores, cards etc ...
 struct State {
     delta_time: Duration,
+    grid: Grid,
 }
 
 impl ggez::event::EventHandler for State {
@@ -29,18 +30,13 @@ impl ggez::event::EventHandler for State {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
         
-        let origin = Vector2 { x: 100, y: 100 };
-        let positions = vec![
-            Vector2 { x: 0, y: 0 },
-            Vector2 { x: 1, y: 0 },
-            Vector2 { x: 0, y: 1 },
-            Vector2 { x: 1, y: 1 },
-        ];
-
-        for pos in positions {
-            let screen_pos = tile_position(origin, pos);
-
-            tile::draw_tile(ctx, &mut canvas, screen_pos)?;
+        for (x, row) in self.grid.cells.iter().enumerate() {
+            for (y, tile) in row.iter().enumerate() {
+                let position: Vector2<i32> = Vector2 { x: x as i32, y: y as i32 };
+                let screen_pos = tile_position(&self.grid.origin, &position);
+    
+                tile::draw_tile(ctx, &mut canvas, &screen_pos, tile)?;
+            }
         }
 
         let text = Text::new("Rust game");
@@ -56,6 +52,7 @@ impl ggez::event::EventHandler for State {
         Ok(())
     }
 }
+
 fn main() {
     let window_setup = WindowSetup{
         title: "Rust Game".to_owned(),
@@ -71,6 +68,7 @@ fn main() {
 
     let state = State{
         delta_time: Duration::new(0, 0),
+        grid: Grid::new(Vector2 { x: 300, y: 15 }),
     };
 
     let conf = Conf {
