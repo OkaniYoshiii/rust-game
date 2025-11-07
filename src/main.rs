@@ -3,7 +3,7 @@ use std::time::Duration;
 use game::tile::{self, tile_position};
 use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
 
-const TARGET_FPS: u32 = 30;
+const UPDATE_RATE: u32 = 30;
 
 /// # Game State
 /// 
@@ -17,6 +17,10 @@ struct State {
 
 impl ggez::event::EventHandler for State {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        while !ctx.time.check_update_time(UPDATE_RATE) {
+            return Ok(());
+        }
+
         self.delta_time = ctx.time.delta();
 
         Ok(())
