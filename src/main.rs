@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use game::tile::{self, tile_position};
+use game::tile::{self};
 use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
 
 const TARGET_FPS: u32 = 30;
@@ -25,19 +25,9 @@ impl ggez::event::EventHandler for State {
     fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
         
-        let origin = Vector2 { x: 100, y: 100 };
-        let positions = vec![
-            Vector2 { x: 0, y: 0 },
-            Vector2 { x: 1, y: 0 },
-            Vector2 { x: 0, y: 1 },
-            Vector2 { x: 1, y: 1 },
-        ];
+        let origin = Vector2 { x: 100.0, y: 100.0 };
 
-        for pos in positions {
-            let screen_pos = tile_position(origin, pos);
-
-            tile::draw_tile(ctx, &mut canvas, screen_pos)?;
-        }
+        tile::draw_tilemap(&mut canvas, ctx, &origin, &tile::TILEMAP)?;
 
         let text = Text::new("Rust game");
         let params = DrawParam{
@@ -77,6 +67,7 @@ fn main() {
 
     let (ctx, event_loop) = ContextBuilder::new("game", "OkaniYoshiii")
         .default_conf(conf)
+        .add_resource_path("./resources")
         .build()
         .unwrap();
 
