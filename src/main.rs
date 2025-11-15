@@ -1,9 +1,15 @@
 use std::time::Duration;
 
-use game::tile::{self};
+use game::tile::{self, Tile};
 use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
 
 const TARGET_FPS: u32 = 30;
+
+const TILEMAP: [&'static[Tile]; 3] = [
+    &[Tile::Home, Tile::Home, Tile::Home],
+    &[Tile::None, Tile::None, Tile::None],
+    &[Tile::Home, Tile::Home, Tile::Home],
+];
 
 /// # Game State
 /// 
@@ -27,7 +33,7 @@ impl ggez::event::EventHandler for State {
         
         let origin = Vector2 { x: 100.0, y: 100.0 };
 
-        tile::draw_tilemap(&mut canvas, ctx, &origin, &tile::TILEMAP)?;
+        tile::draw_tilemap(&mut canvas, ctx, &origin, &TILEMAP)?;
 
         let text = Text::new("Rust game");
         let params = DrawParam{

@@ -7,20 +7,12 @@ const TILE_ASPECT_RATIO: f32 = 1.0 / 2.0;
 const TILE_WIDTH: i32 = 100;
 const TILE_HEIGHT: i32 = ((TILE_WIDTH as f32) * TILE_ASPECT_RATIO) as i32;
 
-pub const TILEMAP: TileMap = [
-    [Tile::Home, Tile::Home, Tile::Home],
-    [Tile::None, Tile::None, Tile::None],
-    [Tile::Home, Tile::Home, Tile::Home],
-];
-
-type TileMap = [[Tile; 3]; 3];
-
 pub enum Tile {
     None,
     Home,
 }
 
-pub fn draw_tilemap(canvas: &mut Canvas, ctx: &mut Context, origin: &Vector2<f32>, tilemap: &TileMap) -> GameResult {
+pub fn draw_tilemap(canvas: &mut Canvas, ctx: &mut Context, origin: &Vector2<f32>, tilemap: &[&[Tile]]) -> GameResult {
     for (y, row) in tilemap.iter().enumerate() {
         for (x, tile) in row.iter().enumerate() {
             let tile_pos = Vector2{ x: x as i32, y: y as i32};
