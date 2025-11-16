@@ -37,7 +37,7 @@ impl<const N: usize> ggez::event::EventHandler for State<N> {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
         
-        let origin = Vector2 { x: 100.0, y: 100.0 };
+        let origin = Point2 { x: 100.0, y: 100.0 };
 
         tile::draw_tilemap(&mut canvas, ctx, &origin, &TILEMAP)?;
 
