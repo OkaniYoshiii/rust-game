@@ -7,15 +7,43 @@ const TILE_ASPECT_RATIO: f32 = 1.0 / 2.0;
 const TILE_WIDTH: i32 = 100;
 const TILE_HEIGHT: i32 = ((TILE_WIDTH as f32) * TILE_ASPECT_RATIO) as i32;
 
+pub struct Tilemap<const W: usize, const H: usize> {
+    pub origin: Point2<f32>,
+    pub tiles: [[Tile; W]; H],
+}
+
+impl<const W: usize, const H: usize> Tilemap<W, H> {
+    pub const fn new(origin: Point2<f32>, tiles: [[Tile; W]; H]) -> Self {
+        Tilemap {
+            origin: origin,
+            tiles: tiles,
+        }
+    }
+
+    pub fn draw(&self, canvas: &mut Canvas, ctx: &mut Context) -> GameResult {
+        draw_tilemap(canvas, ctx, &self.origin, &self.tiles)?;
+
+        Ok(())
+    }
+
+    pub fn tile_position(&self, tile_pos: &Point2<f32>) -> Point2<f32> {
+        tile_position(&self.origin, tile_pos)
+    }
+
+    pub fn tile_center(&self, tile_pos: &Point2<f32>) -> Point2<f32> {
+        tile_center(&self.origin, tile_pos)
+    }
+}
+
 pub enum Tile {
     None,
     Home,
 }
 
-pub fn draw_tilemap(canvas: &mut Canvas, ctx: &mut Context, origin: &Point2<f32>, tilemap: &[&[Tile]]) -> GameResult {
+pub fn draw_tilemap<const W: usize, const H: usize>(canvas: &mut Canvas, ctx: &mut Context, origin: &Point2<f32>, tilemap: &[[Tile; W]; H]) -> GameResult {
     for (y, row) in tilemap.iter().enumerate() {
         for (x, tile) in row.iter().enumerate() {
-            let tile_pos = Point2{ x: x as i32, y: y as i32};
+            let tile_pos = Point2{ x: x as f32,  y: y as f32};
             let screen_position = tile_position(origin, &tile_pos);
             match tile {
                 Tile::Home => draw_home_tile(canvas, ctx, screen_position)?,
@@ -80,15 +108,25 @@ pub fn draw_tile(canvas: &mut Canvas, image: &Image, dest: impl Into<Point2<f32>
 /// 
 /// origin: La position sur l'écran de la tile à la position: 0,0
 /// tile_pos: la position x et y sur la grille de la tile à poser
-pub fn tile_position(origin: &Point2<f32>, tile_pos: &Point2<i32>) -> Point2<f32> {
-    let screen_x = origin.x + ((tile_pos.x - tile_pos.y) * (TILE_WIDTH / 2)) as f32;
-    let screen_y = origin.y + ((tile_pos.x + tile_pos.y) * (TILE_HEIGHT / 2)) as f32;
+pub fn tile_position(origin: &Point2<f32>, tile_pos: &Point2<f32>) -> Point2<f32> {
+    let screen_x = origin.x + (tile_pos.x - tile_pos.y) * ((TILE_WIDTH / 2) as f32);
+    let screen_y = origin.y + (tile_pos.x + tile_pos.y) * ((TILE_HEIGHT / 2) as f32);
 
     Point2 {
-        x: screen_x as f32,
-        y: screen_y as f32,
+        x: screen_x,
+        y: screen_y,
     }
 }
+
+pub fn tile_center(origin: &Point2<f32>, tile_pos: &Point2<f32>) -> Point2<f32> {
+    let mut dest = tile_position(origin, tile_pos);
+
+    dest.x = dest.x + (TILE_WIDTH / 2) as f32;
+    dest.y = dest.y + (TILE_HEIGHT / 2) as f32;
+
+    dest
+}
+
 
 // pub fn draw_tile(ctx: &mut Context, canvas: &mut Canvas, screen_pos: &Vector2<i32>) -> GameResult {
 //     let mut rng = rand::rng();
@@ -125,7 +163,7 @@ mod tests {
 
     struct TilePosTest {
         origin: Point2<f32>,
-        tile_pos: Point2<i32>,
+        tile_pos: Point2<f32>,
 
         expected: Point2<f32>,
     }
@@ -136,7 +174,7 @@ mod tests {
         let tests: Vec<TilePosTest> = Vec::from([
             TilePosTest{
                 origin: origin,
-                tile_pos: Point2 { x: 0, y: 0 },
+                tile_pos: Point2 { x: 0.0, y: 0.0 },
                 expected: Point2 { x: origin.x, y: origin.y }
             },
         ]);

@@ -1,15 +1,18 @@
 use std::time::Duration;
 
-use game::{entity::{EntityManager, car::Car}, tile::{self, Tile}};
-use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::{Point2, Vector2}};
+use game::{entity::{EntityManager, car::Car}, tile::{self, Tile, Tilemap}};
+use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, input::keyboard::{self, KeyCode}, mint::{Point2, Vector2}};
 
 const TARGET_FPS: u32 = 30;
 
-const TILEMAP: [&'static[Tile]; 3] = [
-    &[Tile::Home, Tile::Home, Tile::Home],
-    &[Tile::None, Tile::None, Tile::None],
-    &[Tile::Home, Tile::Home, Tile::Home],
-];
+const TILEMAP: Tilemap<3, 3> = Tilemap::new(
+    Point2 { x: 100.0, y: 100.0 },
+    [
+        [Tile::Home, Tile::Home, Tile::Home],
+        [Tile::None, Tile::None, Tile::None],
+        [Tile::Home, Tile::Home, Tile::Home],
+    ],
+);
 
 /// # Game State
 /// 
@@ -17,19 +20,15 @@ const TILEMAP: [&'static[Tile]; 3] = [
 /// 
 /// Stores all data related to represent the game state such as
 /// player position, scores, cards etc ...
-struct State<const N: usize> {
+struct State<const N: usize, const W: usize, const H: usize> where {
+    tilemap: Tilemap<W, H>,
     delta_time: Duration,
     entity_manager: EntityManager<N>,
 }
 
-impl<const N: usize> ggez::event::EventHandler for State<N> {
+impl<const N: usize, const W: usize, const H: usize> ggez::event::EventHandler for State<N, W, H> {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.delta_time = ctx.time.delta();
-
-        for car in &mut self.entity_manager.car_pool {
-            car.pos.x += car.dir.x * car.speed as f32;
-            car.pos.y += car.dir.y * car.speed as f32;
-        }
 
         Ok(())
     }
@@ -37,9 +36,7 @@ impl<const N: usize> ggez::event::EventHandler for State<N> {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
         
-        let origin = Point2 { x: 100.0, y: 100.0 };
-
-        tile::draw_tilemap(&mut canvas, ctx, &origin, &TILEMAP)?;
+        self.tilemap.draw(&mut canvas, ctx)?;
 
         let text = Text::new("Rust game");
         let params = DrawParam{
@@ -69,18 +66,17 @@ fn main() {
         ..Default::default()
     };
 
-    let duration = Duration::new(0, 0);
-
     let car_pool: [Car; 1] = [
         Car::new(
-            Point2 { x: 1.0, y: 1.0 },
+            tile::tile_position(&TILEMAP.origin, &Point2 { x: 0.0, y: 0.0 }),
             Vector2 { x: 1.0, y: 0.0 },
-            5,
+            5
         ),
     ];
 
     let state = State{
-        delta_time: duration,
+        tilemap: TILEMAP,
+        delta_time: Duration::new(0, 0),
         entity_manager: EntityManager {
             car_pool: car_pool,
         }
