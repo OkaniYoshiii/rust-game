@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use game::tile::{self, Tile};
-use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::Vector2};
+use game::{entity::{EntityManager, car::Car}, tile::{self, Tile}};
+use ggez::{self, Context, ContextBuilder, GameResult, conf::{Conf, WindowMode, WindowSetup}, event, graphics::{Canvas, Color, DrawParam, Text}, mint::{Point2, Vector2}};
 
 const TARGET_FPS: u32 = 30;
 
@@ -17,18 +17,24 @@ const TILEMAP: [&'static[Tile]; 3] = [
 /// 
 /// Stores all data related to represent the game state such as
 /// player position, scores, cards etc ...
-struct State {
+struct State<const N: usize> {
     delta_time: Duration,
+    entity_manager: EntityManager<N>,
 }
 
-impl ggez::event::EventHandler for State {
+impl<const N: usize> ggez::event::EventHandler for State<N> {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.delta_time = ctx.time.delta();
+
+        for car in &mut self.entity_manager.car_pool {
+            car.pos.x += car.dir.x * car.speed as f32;
+            car.pos.y += car.dir.y * car.speed as f32;
+        }
 
         Ok(())
     }
 
-    fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
+    fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = Canvas::from_frame(ctx, Color::WHITE);
         
         let origin = Vector2 { x: 100.0, y: 100.0 };
@@ -40,6 +46,8 @@ impl ggez::event::EventHandler for State {
             color: Color::BLACK,
             ..Default::default()
         };
+
+        self.entity_manager.draw_cars(&mut canvas, ctx)?;
 
         canvas.draw(&text, params);
         canvas.finish(ctx)?;
@@ -61,8 +69,21 @@ fn main() {
         ..Default::default()
     };
 
+    let duration = Duration::new(0, 0);
+
+    let car_pool: [Car; 1] = [
+        Car::new(
+            Point2 { x: 1.0, y: 1.0 },
+            Vector2 { x: 1.0, y: 0.0 },
+            5,
+        ),
+    ];
+
     let state = State{
-        delta_time: Duration::new(0, 0),
+        delta_time: duration,
+        entity_manager: EntityManager {
+            car_pool: car_pool,
+        }
     };
 
     let conf = Conf {
