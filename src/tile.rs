@@ -1,46 +1,99 @@
+use ggez::mint::Point2;
 use ggez::{Context, GameResult};
 use ggez::{mint::Vector2};
-use ggez::graphics::{self, Canvas, Color, Mesh, Rect};
-use rand::Rng;
+use ggez::graphics::{self, Canvas, DrawParam, Image, Transform};
 
-const GRID_SIZE: u8 = 10;
-const TILE_WIDTH: i32 = 60;
-const TILE_HEIGHT: i32 = 30;
-const CELLS: Cells = [
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::House, Tile::House, Tile::House, Tile::House, Tile::House, Tile::House, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-    [Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None, Tile::None],
-];
+const TILE_ASPECT_RATIO: f32 = 1.0 / 2.0;
+const TILE_WIDTH: i32 = 100;
+const TILE_HEIGHT: i32 = ((TILE_WIDTH as f32) * TILE_ASPECT_RATIO) as i32;
 
-pub enum Tile {
-    House,
-    None,
+pub struct Tilemap<const W: usize, const H: usize> {
+    pub origin: Point2<f32>,
+    pub tiles: [[Tile; W]; H],
 }
 
-pub type Cells = [[Tile; GRID_SIZE as usize]; GRID_SIZE as usize];
-// pub struct Cells(pub [[Option<Tile>; GRID_SIZE]; GRID_SIZE]);
-
-pub struct Grid {
-    pub origin: Vector2<i32>,
-    pub cells: Cells,
-}
-
-impl Grid {
-    pub fn new(origin: Vector2<i32>) -> Self {
-        Grid {
+impl<const W: usize, const H: usize> Tilemap<W, H> {
+    pub const fn new(origin: Point2<f32>, tiles: [[Tile; W]; H]) -> Self {
+        Tilemap {
             origin: origin,
-            cells: CELLS,
+            tiles: tiles,
         }
+    }
+
+    pub fn draw(&self, canvas: &mut Canvas, ctx: &mut Context) -> GameResult {
+        draw_tilemap(canvas, ctx, &self.origin, &self.tiles)?;
+
+        Ok(())
+    }
+
+    pub fn tile_position(&self, tile_pos: &Point2<f32>) -> Point2<f32> {
+        tile_position(&self.origin, tile_pos)
+    }
+
+    pub fn tile_center(&self, tile_pos: &Point2<f32>) -> Point2<f32> {
+        tile_center(&self.origin, tile_pos)
     }
 }
 
+pub enum Tile {
+    None,
+    Home,
+}
+
+pub fn draw_tilemap<const W: usize, const H: usize>(canvas: &mut Canvas, ctx: &mut Context, origin: &Point2<f32>, tilemap: &[[Tile; W]; H]) -> GameResult {
+    for (y, row) in tilemap.iter().enumerate() {
+        for (x, tile) in row.iter().enumerate() {
+            let tile_pos = Point2{ x: x as f32,  y: y as f32};
+            let screen_position = tile_position(origin, &tile_pos);
+            match tile {
+                Tile::Home => draw_home_tile(canvas, ctx, screen_position)?,
+                Tile::None => draw_empty_tile(canvas, ctx,screen_position)?,
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn draw_home_tile(canvas: &mut Canvas, ctx: &mut Context, screen_pos: Point2<f32>) -> GameResult {
+    let image = graphics::Image::from_path(ctx, "/home.png")?;
+
+    let dest = Point2 {
+        x: screen_pos.x,
+        y: screen_pos.y - 50.0,
+    };
+
+    draw_tile(canvas, &image, dest);
+
+    Ok(())
+}
+
+pub fn draw_empty_tile(canvas: &mut Canvas, ctx: &mut Context, screen_pos: Point2<f32>) -> GameResult {
+    let image = graphics::Image::from_path(ctx, "/empty.png")?;
+
+    let dest = Point2 {
+        x: screen_pos.x,
+        y: screen_pos.y - 50.0,
+    };
+
+    draw_tile(canvas, &image, dest);
+
+    Ok(())
+}
+
+pub fn draw_tile(canvas: &mut Canvas, image: &Image, dest: impl Into<Point2<f32>>) {
+    let draw_param = DrawParam{
+        transform: Transform::Values {
+            dest: dest.into(),
+            scale: Vector2 { x: 1.0, y: 1.0 },
+            offset: Point2 { x: 0.0, y: 0.0 },
+            rotation: 0.0,
+        },
+        ..Default::default()
+    };
+
+    canvas.draw(image, draw_param);
+}
 /// For an isometric grid like this one:
 ///          /x:0,y:0/
 ///     /x:0,y:1/ /x:1,y:0/
@@ -53,72 +106,48 @@ impl Grid {
 /// 
 /// See: https://pikuma.com/blog/isometric-projection-in-games
 /// 
-pub fn tile_position(origin: &Vector2<i32>, tile_pos: &Vector2<i32>) -> Vector2<i32> {
-    let screen_x = origin.x + ((tile_pos.x - tile_pos.y) * TILE_WIDTH / 2);
-    let screen_y = origin.y + ((tile_pos.x + tile_pos.y) * TILE_HEIGHT / 2);
+/// origin: La position sur l'écran de la tile à la position: 0,0
+/// tile_pos: la position x et y sur la grille de la tile à poser
+pub fn tile_position(origin: &Point2<f32>, tile_pos: &Point2<f32>) -> Point2<f32> {
+    let screen_x = origin.x + (tile_pos.x - tile_pos.y) * ((TILE_WIDTH / 2) as f32);
+    let screen_y = origin.y + (tile_pos.x + tile_pos.y) * ((TILE_HEIGHT / 2) as f32);
 
-    Vector2{
+    Point2 {
         x: screen_x,
         y: screen_y,
     }
 }
 
-pub fn draw_tile(ctx: &mut Context, canvas: &mut Canvas, screen_pos: &Vector2<i32>, tile: &Tile) -> GameResult {
-    let mut rng = rand::rng();
-    let color = Color::from_rgb(
-        rng.random_range(0..255),
-        rng.random_range(0..255),
-        rng.random_range(0..255),
-    );
+pub fn tile_center(origin: &Point2<f32>, tile_pos: &Point2<f32>) -> Point2<f32> {
+    let mut dest = tile_position(origin, tile_pos);
 
-    let rect = Rect::new(
-        screen_pos.x as f32,
-        screen_pos.y as f32,
-        TILE_WIDTH as f32,
-        TILE_HEIGHT as f32,
-    );
+    dest.x = dest.x + (TILE_WIDTH / 2) as f32;
+    dest.y = dest.y + (TILE_HEIGHT / 2) as f32;
 
-    let mesh = match tile {
-        Tile::House => Mesh::new_rectangle(
-            ctx,
-            graphics::DrawMode::fill(),
-            rect,
-            Color::from_rgb(255, 255, 255),
-        )?,
-        Tile::None => Mesh::new_rectangle(
-            ctx,
-            graphics::DrawMode::fill(),
-            rect,
-            color,
-        )?
-    };
-
-    canvas.draw(&mesh, graphics::DrawParam::default());
-
-    Ok(())
+    dest
 }
 
 #[cfg(test)]
 mod tests {
-    use ggez::mint::Vector2;
+    use ggez::mint::{Point2};
 
     use crate::tile::{tile_position};
 
     struct TilePosTest {
-        origin: Vector2<i32>,
-        tile_pos: Vector2<i32>,
+        origin: Point2<f32>,
+        tile_pos: Point2<f32>,
 
-        expected: Vector2<i32>,
+        expected: Point2<f32>,
     }
 
     #[test]
     fn assert_correct() {
-        let origin = Vector2 { x: 100, y: 100 };
+        let origin = Point2 { x: 100.0, y: 100.0 };
         let tests: Vec<TilePosTest> = Vec::from([
             TilePosTest{
                 origin: origin,
-                tile_pos: Vector2 { x: 0, y: 0 },
-                expected: Vector2 { x: origin.x, y: origin.y }
+                tile_pos: Point2 { x: 0.0, y: 0.0 },
+                expected: Point2 { x: origin.x, y: origin.y }
             },
         ]);
 
