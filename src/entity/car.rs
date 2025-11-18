@@ -1,9 +1,12 @@
-use ggez::{Context, GameResult, graphics::{Canvas, Color, DrawMode, DrawParam, Mesh}, mint::{Point2, Vector2}};
+use ggez::{Context, GameResult, glam::Vec2, graphics::{Canvas, Color, DrawMode, DrawParam, Mesh}, mint::{Point2, Vector2}};
+
+use crate::math;
 
 pub struct Car {
     pub pos: Point2<f32>,
     pub dir: Vector2<f32>,
     pub speed: u16,
+    pub dest: Point2<f32>
 }
 
 impl Car {
@@ -12,6 +15,7 @@ impl Car {
             pos: pos,
             dir: dir,
             speed: speed,
+            dest: Point2 { x: pos.x, y: pos.y }
         }
     }
 
@@ -30,5 +34,12 @@ impl Car {
         canvas.draw(&circle, draw_param);
 
         Ok(())
+    }
+
+    pub fn point_to(&mut self, destination: &Vec2) {
+        let dir = math::direction(&self.pos.into(), destination);
+        
+        self.dir.x = dir.x;
+        self.dir.y = dir.y;
     }
 }

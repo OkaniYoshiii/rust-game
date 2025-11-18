@@ -34,6 +34,8 @@ impl<const N: usize, const W: usize, const H: usize> ggez::event::EventHandler f
 
         self.delta_time = ctx.time.delta();
 
+        self.entity_manager.update_cars(ctx)?;
+
         Ok(())
     }
 
@@ -74,7 +76,7 @@ fn main() {
     let car_pool: [Car; 1] = [
         Car::new(
             tile::tile_position(&TILEMAP.origin, &Point2 { x: 0.0, y: 0.0 }),
-            Vector2 { x: 1.0, y: 0.0 },
+            Vector2 { x: 0.0, y: 0.0 },
             5
         ),
     ];
